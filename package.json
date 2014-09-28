@@ -1,0 +1,17 @@
+{
+    "name": "mangrove",
+    "homepage": "https://github.com/khrome/mangrove",
+    "version": "0.0.1-alpha",
+    "main": "mangrove.js",
+    "description": "Test DB built on indexed-set",
+    "author": "Abbey Hawk Sparrow <@khrome> (http://patternweaver.com)",
+    "contributors": [],
+    "bugs": {
+        "url": "https://github.com/khrome/mangrove/issues"
+    },
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "git@github.com:khrome/mangrove.git"
+    }
+}

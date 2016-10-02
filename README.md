@@ -41,7 +41,11 @@ Returned sets are instances of [indexed-set](https://www.npmjs.com/package/index
 ####Inserting
 
 	datasource.query(
-        'insert into users (age, name, value) values (20, "john", "dsjdfjdb832ygg36"), (20, "paul", "dsjdfjdb832ygg36"), (19, "george", "dsjdfjdb832ygg36"), (22, "richard", "dsjdfjdb832ygg36")', 
+        'insert into users (age, name, value) values '+
+        	'(20, "john", "dsjdfjdb832ygg36"), '+
+        	'(20, "paul", "dsjdsdsfmg2ygg36"), '+
+        	'(19, "george", "ddfdfdb832ygg36"), '+
+        	'(22, "richard", "fdjkdfhhir987ere")', 
         function(err){
         	//if(!err), everything went fine
         }

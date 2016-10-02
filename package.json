@@ -1,9 +1,9 @@
 {
     "name": "mangrove",
     "homepage": "https://github.com/khrome/mangrove",
-    "version": "0.0.1-alpha",
+    "version": "0.0.2-alpha",
     "main": "mangrove.js",
-    "description": "Test DB built on indexed-set",
+    "description": "memory conserving in-memory database built on indexed-set",
     "author": "Abbey Hawk Sparrow <@khrome> (http://patternweaver.com)",
     "contributors": [],
     "bugs": {

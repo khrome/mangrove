@@ -36,6 +36,45 @@
     var active = 0;
     var whereParser = new WhereParser();
     
+    function computeSetWhere(set, where){
+        var results = set;
+        var fullSet = results.clone();
+        var previousConjunction;
+        where.forEach(function(part, whereIndex){
+            if(Array.isArray(part)){
+                //support subenvironments through recursive call with clone
+            }else{
+                switch(part.type){
+                    case 'expression':
+                        if(previousConjunction){
+                            if(!results[previousConjunction.value]){
+                                throw new Error(
+                                    'conjunction not supported: '+
+                                    previousConjunction.value
+                                );
+                            }
+                            results = results.clone();
+                            var predicate = fullSet.clone().with(part.key, part.operator, part.value);
+                            results[previousConjunction.value](predicate);
+                            previousConjunction = undefined;
+                        }else{
+                            results = results.clone();
+                            results.with(
+                                part.key, 
+                                part.operator, 
+                                part.value
+                            );
+                        }
+                        break;
+                    case 'conjunction':
+                        previousConjunction = part;
+                        break;
+                }
+            }
+        });
+        return results;
+    }
+    
     function ready(cb){
         if((!jobs) || active === 0) return cb();
         else return jobs.push(cb);
@@ -105,42 +144,8 @@
                 var collections = match[2].split(',');
                 var collection = ob.collection(collections[0]);
                 var where = whereParser.parse(match[3]);
-                //todo: handle specific returns without first allocating all that memory
-                var results = new Indexed.Set(collection);
-                var fullSet = results.clone();
-                var previousConjunction;
-                where.forEach(function(part, whereIndex){
-                    if(Array.isArray(part)){
-                        //support subenvironments through recursive call with clone
-                    }else{
-                        switch(part.type){
-                            case 'expression':
-                                if(previousConjunction){
-                                    if(!results[previousConjunction.value]){
-                                        throw new Error(
-                                            'conjunction not supported: '+
-                                            previousConjunction.value
-                                        );
-                                    }
-                                    results = results.clone();
-                                    var predicate = fullSet.clone().with(part.key, part.operator, part.value);
-                                    results[previousConjunction.value](predicate);
-                                    previousConjunction = undefined;
-                                }else{
-                                    results = results.clone();
-                                    results.with(
-                                        part.key, 
-                                        part.operator, 
-                                        part.value
-                                    );
-                                }
-                                break;
-                            case 'conjunction':
-                                previousConjunction = part;
-                                break;
-                        }
-                    }
-                });
+                //todo: handle specific returns
+                var results = computeSetWhere(new Indexed.Set(collection), where);
                 if(collections.length > 1) throw new Exception('multi-collection selection unavailable');
                 callback(undefined, results);
             }else{
@@ -151,16 +156,36 @@
                     var collections = match[2].split(',');
                     if(collections.length > 1) throw new Exception('multi-collection selection unavailable');
                     var collection = ob.collection(collections[0]);
-                    if(returns == '*'){
-                        var results = new Indexed.Set(collection);
-                        callback(undefined, results);
-                    }
-                    //ob.tables
+                    if(returns == '*') callback(undefined, new Indexed.Set(collection));
                 }
             }
-            match = query.match(/insert into (.*) values (.*)/i)
+            match = query.match(/insert into (.*) \((.*)\) values \((.*)\)/i)
             if(match){
-                console.log('insert')
+                var collections = match[1].split(',').map(function(str){ return str.trim()});
+                if(collections.length > 1) throw new Exception('you can only insert into a single collection');
+                var collection = ob.collection(collections[0]);
+                if(!collection) throw new Exception('collection not found: '+collections[0]);
+                var columns = match[2].split(',').map(function(str){ return str.trim()});
+                var valuesSets = match[3].split(/\) *, *\(/).map(function(set){
+                    return eval('['+set+']'); //yes, this is crazy dangerous and needs to be replaced by a parser
+                });
+                
+                var fullSet = new Indexed.Set(collection)
+                
+                valuesSets.forEach(function(set){
+                    var newItem = {};
+                    columns.forEach(function(columnName, index){
+                        newItem[columnName] = set[index];
+                    });
+                    fullSet.push(newItem);
+                });
+                
+                callback(undefined);
+            }else{
+                match = query.match(/insert into (.*) values (.*)/i)
+                if(match){
+                    throw new Error('you must define column names in order to insert. While defining by column order is legal SQL, it would be ambiguous given the arbitrary object insertion and the lack of consistent ordering in js objects. Manually defining a field order may be supported in the future in order to work around this. File a bug!');
+                }
             }
             match = query.match(/update (.*) set (.*) where (.*)/i)
             if(match){
@@ -177,7 +202,7 @@
         });
     }
     
-    DataService.prototype.inquire = function(query, callback){ //promise-based
+    DataService.prototype.inquire = function(query){ //promise-based
         var ob = this;
         var promise = new Promise(function(resolve, reject){
             ob.query(query, function(err, results){

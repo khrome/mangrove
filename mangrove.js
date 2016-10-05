@@ -11,6 +11,7 @@
             'indexed-set', 
             'sift', 
             'where-parser', 
+            'strangler', 
             'browser-request'
         ], function(a, b, c, request){
             return factory(a, b, c, {readFile:clientReadFileGenerator(request)});
@@ -20,6 +21,7 @@
             require('indexed-set'), 
             require('sift'), 
             require('where-parser'),
+            require('strangler'),
             require('fs')
         );
     }else{
@@ -27,10 +29,11 @@
             root.IndexedSet, 
             root.Sift, 
             root.WhereParser,
+            root.Strangler,
             {readFile:clientReadFileGenerator(root.request)}
         );
     }
-}(this, function(Indexed, Sift, WhereParser, fs){
+}(this, function(Indexed, Sift, WhereParser, strings, fs){
     
     var jobs = [];
     var active = 0;
@@ -189,7 +192,30 @@
             }
             match = query.match(/update (.*) set (.*) where (.*)/i)
             if(match){
-                console.log('update')
+                var values = strings.splitHonoringQuotes(match[2], ',').map(function(str){
+                    var clean = str.trim();
+                    var pos = clean.indexOf('=');
+                    var field = clean.substring(0, pos).trim();
+                    var value = eval(clean.substring(pos+1).trim());
+                    return {
+                        name : field,
+                        value : value
+                    };
+                });
+                var collections = match[1].split(',');
+                var collection = ob.collection(collections[0]);
+                var where = whereParser.parse(match[3]);
+                //todo: handle specific returns
+                var results = computeSetWhere(new Indexed.Set(collection), where);
+                if(collections.length > 1) throw new Exception('multi-collection updates not supported');
+                
+                results.forEach(function(item, index){
+                    values.forEach(function(set){
+                        item[set.name] = typeof set.value == 'function'?set.value(item):set.value;
+                    });
+                });
+                
+                callback(undefined);
             }
             match = query.match(/delete (.*) from (.*) where (.*)/i)
             if(match){
@@ -197,7 +223,7 @@
             }
             match = query.match(/create (.*)/)
             if(match){
-                console.log('delete')
+                console.log('create')
             }
         });
     }

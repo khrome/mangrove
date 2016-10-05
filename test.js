@@ -118,6 +118,30 @@ describe('Mangrove', function(){
             
         });
         
+        describe('updates', function(){
+            
+            it('single rows with multiple values', function(done){
+                datasource.query(
+                    'update users set extra="number9", age=44 where name = "bob"', 
+                    function(err){
+                        should.not.exist(err);
+                        datasource.query(
+                            'select * from users where name = "bob"', 
+                            function(err, data){
+                                should.not.exist(err);
+                                var results = data.toArray();
+                                results.length.should.equal(1);
+                                should.exist(results[0].extra);
+                                results[0].extra.should.equal('number9');
+                                results[0].age.should.equal(44);
+                                done();
+                            }
+                        );
+                    }
+                );
+            });
+            
+        });
     });
     
     /*describe('handles mongo/sift', function(){

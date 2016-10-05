@@ -35,8 +35,8 @@
     }
 }(this, function(Indexed, Sift, WhereParser, strings, fs){
     
-    var jobs = [];
-    var active = 0;
+    //var jobs = [];
+    //var active = 0;
     var whereParser = new WhereParser();
     
     function computeSetWhere(set, where){
@@ -78,28 +78,14 @@
         return results;
     }
     
-    function ready(cb){
-        if((!jobs) || active === 0) return cb();
-        else return jobs.push(cb);
-    }
-    
-    function completed(){
-        active--;
-        if(active === 0){
-            var actions = jobs;
-            jobs = false;
-            actions.forEach(function(cb){
-                cb();
-            })
-        }
-    }
-    
     function DataService(options){
         this.options = options || {};
         this.tables = {};
+        this.jobs = [];
+        this.active = 0;
         var ob = this;
         if(this.options.file){
-            active++;
+            this.active++;
             fs.readFile(this.options.file, function(err, body){
                 var data = JSON.parse(body);
                 if(data){
@@ -109,7 +95,7 @@
                             'id'
                         );
                     });
-                    completed();
+                    ob.completed();
                 }
             });
         }
@@ -117,29 +103,72 @@
         //options.lazy
     }
     
+    DataService.prototype.ready = function(cb){
+        if((!this.jobs) || this.active === 0) return cb();
+        else return this.jobs.push(cb);
+    }
+    
+    DataService.prototype.completed = function(){
+        this.active--;
+        if(this.active === 0){
+            var actions = this.jobs;
+            this.jobs = false;
+            actions.forEach(function(cb){
+                cb();
+            })
+        }
+    }
+    
     DataService.prototype.collection = function(name){
-        if(!this.tables[name]) throw new Error('unknown collection: '+name);
+        if(!this.tables[name]){
+            throw new Error('unknown collection: '+name);
+        }
         return this.tables[name];
     }
     
     DataService.prototype.query = function(query, callback){
         switch(typeof query){
             case 'string':
-                this.sql(query, callback);
-                break;
-            case 'object':
-                this.sift(query, callback);
+                if(query.indexOf(' ') === -1 && query.indexOf("\n") === -1){
+                    //it's a single world
+                    var collection = this.collection(query);
+                    var set = new Indexed.Set(collection);
+                    return {
+                        find : function(query, cb){
+                            if(typeof query === 'function' && !cb){
+                                return query(undefined, set);
+                            }
+                            set.sift(query, function(){
+                                return cb?cb(undefined, set):undefined;
+                            });
+                        },
+                        update : function(updates, where, cb){
+                            set.sift(where, function(){
+                                set.forEach(function(item){
+                                    Object.keys(updates).forEach(function(key){
+                                        item[key] = updates[key];
+                                    });
+                                });
+                                if(cb) cb();
+                            });
+                        },
+                        insert : function(item, cb){
+                            if(Array.isArray(item)){
+                                item.forEach(function(itm){
+                                    set.push(itm);
+                                });
+                            }else set.push(item);
+                            if(cb) cb();
+                        }
+                    }
+                }else this.sql(query, callback);
                 break;
         }
     }
     
-    DataService.prototype.sift = function(query, callback){
-        throw new Error('not yet supported')
-    }
-    
     DataService.prototype.sql = function(query, callback){
         var ob = this;
-        ready(function(){
+        this.ready(function(){
             var match;
             match = query.match(/select (.*) from (.*) where (.*)/i)
             if(match){
@@ -229,6 +258,7 @@
     }
     
     DataService.prototype.inquire = function(query){ //promise-based
+        //todo: support mongo query documents through this interface
         var ob = this;
         var promise = new Promise(function(resolve, reject){
             ob.query(query, function(err, results){

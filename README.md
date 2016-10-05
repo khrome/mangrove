@@ -21,13 +21,13 @@ Usage
 
 Returned sets are instances of [indexed-set](https://www.npmjs.com/package/indexed-set) Sets, which you may then use to further analyze the results or just call `.toArray()` and get something more familiar.
 
-###Using SQL
-
-####Creating
+####Creating an instance
 
 	var datasource = new Mangrove({
 		file:'data.json'
 	});
+
+###Using SQL
 
 ####Selecting
 
@@ -62,7 +62,46 @@ Returned sets are instances of [indexed-set](https://www.npmjs.com/package/index
 
 ###Using Mongo Query Documents
 
-[Coming Soon]
+####Selecting
+
+	datasource.query('users').find({
+		age:{$gt:24}
+	}, function(err, data){
+        //data is an Indexed.Set
+    });
+
+####Inserting
+
+	datasource.query('users').insert([{
+		name : "john",
+		age : 20,
+		id: "dsjdfjdb832yg936"
+	},{
+		name : "paul",
+		age : 20,
+		id: "dsjdsdsfmg2ygg26"
+	},{
+		name : "george",
+		age : 19,
+		id: "ddfdfdb832yggr6"
+	},{
+		name : "richard",
+		age : 22,
+		id: "fdjkdfhhir987ere"
+	}],function(err){
+    	//if(!err), everything went fine
+    });
+    
+####Updating
+
+	datasource.query('users').update({
+		name : "ringo",
+		likes : "gardens"
+	}, {
+		id: "fdjkdfhhir987ere"
+	}, function(err){
+		//if(!err), everything went fine
+	});
 
 ###Promises
 
@@ -74,7 +113,6 @@ If callbacks aren't your thing, just use the `.inquire(<query>)` function and yo
  
  **Soon**
  
- - sift support
  - Parenthetical Support
  - Specific returns(not just '*')
  - Implicit Joins

@@ -42,12 +42,21 @@ Returned sets are instances of [indexed-set](https://www.npmjs.com/package/index
 
 	datasource.query(
         'insert into users (age, name, value) values '+
-        	'(20, "john", "dsjdfjdb832ygg36"), '+
-        	'(20, "paul", "dsjdsdsfmg2ygg36"), '+
-        	'(19, "george", "ddfdfdb832ygg36"), '+
+        	'(20, "john", "dsjdfjdb832yg936"), '+
+        	'(20, "paul", "dsjdsdsfmg2ygg26"), '+
+        	'(19, "george", "ddfdfdb832yggr6"), '+
         	'(22, "richard", "fdjkdfhhir987ere")', 
         function(err){
         	//if(!err), everything went fine
+        }
+    );
+    
+####Updating
+
+	datasource.query(
+        'update users set name="ringo",likes="gardens" where id="fdjkdfhhir987ere"', 
+        function(err){
+            //if(!err), everything went fine
         }
     );
 

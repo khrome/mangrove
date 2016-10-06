@@ -2,7 +2,7 @@ Mangrove
 ========
 Mangrove is an in-memory database for working with high-speed ephemeral data, or performing ad-hoc analysis within an application. It supports multiple query languages, and most of the options you would expect from an ephemeral database.
 
-I wouldn't use it in production just yet, but it should be perfectly servicable in simple test cases. As it gets new features and a DB service, lots of use cases may arise.
+I'm currently using it as a DB stub in test cases and simple analysis. As it gets new features and a DB service, lots of use cases may arise.
 
 Why?
 ----
@@ -59,8 +59,28 @@ Returned sets are instances of [indexed-set](https://www.npmjs.com/package/index
             //if(!err), everything went fine
         }
     );
+    
+####Deleting
+
+	datasource.query(
+        'delete from users where name="stu"', 
+        function(err){
+            //if(!err), everything went fine
+        }
+    );
+    
+####Creating
+
+	datasource.query(
+        'create songwriters', 
+        function(err){
+            //if(!err), everything went fine
+        }
+    );
 
 ###Using Mongo Query Documents
+
+In this mode collections are implicitly created.
 
 ####Selecting
 
@@ -100,7 +120,15 @@ Returned sets are instances of [indexed-set](https://www.npmjs.com/package/index
 	}, {
 		id: "fdjkdfhhir987ere"
 	}, function(err){
-		//if(!err), everything went fine
+		//if(!err), everything went fine				
+	});
+
+####Delete
+
+	datasource.query('users').delete({
+		name : "stu"
+	}, function(err){
+		//if(!err), everything went fine				
 	});
 
 ###Promises

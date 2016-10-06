@@ -139,6 +139,57 @@ describe('Mangrove', function(){
             });
             
         });
+        
+        describe('deletes', function(){
+            
+            it('a single row', function(done){
+                //datasource.log = console.log
+                datasource.query(
+                    'delete from users where name = "bob"', 
+                    function(err){
+                        should.not.exist(err);
+                        datasource.query(
+                            'select * from users where name = "bob"', 
+                            function(err, data){
+                                should.not.exist(err);
+                                var results = data.toArray();
+                                results.length.should.equal(0);
+                                done();
+                            }
+                        );
+                    }
+                );
+            });
+            
+        });
+        
+        describe('creates', function(){
+            
+            it('a single collection', function(done){
+                //datasource.log = console.log
+                datasource.query(
+                    'create others', 
+                    function(err){
+                        datasource.query(
+                            'insert into others (name, age, id) values ("edgar", 16, "djfuhf43b325nr7")', 
+                            function(err){
+                                should.not.exist(err);
+                                datasource.query(
+                                    'select * from others where name = "edgar"', 
+                                    function(err, data){
+                                        var results = data.toArray();
+                                        results.length.should.equal(1);
+                                        done();
+                                    }
+                                );
+                            }
+                        );
+                    }
+                );
+            });
+            
+        });
+        
     });
     
     describe('handles mongo/sift', function(){
@@ -274,6 +325,50 @@ describe('Mangrove', function(){
                         done();
                     });
                 });
+            });
+            
+        });
+        
+        describe('deletes', function(){
+            
+            it('a single row', function(done){
+                datasource.query('users').delete({
+                    name : 'bob'
+                }, function(err){
+                    should.not.exist(err);
+                    datasource.query('users').find({
+                        name : 'bob'
+                    }, function(err, data){
+                        should.not.exist(err);
+                        var results = data.toArray();
+                        results.length.should.equal(0);
+                        done();
+                    });
+                });
+            });
+            
+        });
+        
+        describe('creates', function(){
+            
+            it('a single collection', function(done){
+                
+                datasource.query('others').insert({
+                    name : "edgar",
+                    age : 16,
+                    id : "djfuhf43b325nr7"
+                }, function(err){
+                    should.not.exist(err);
+                    datasource.query('others').find({
+                        name : "edgar"
+                    }, function(err, data){
+                        should.not.exist(err);
+                        var results = data.toArray();
+                        results.length.should.equal(1);
+                        done();
+                    });
+                });
+                
             });
             
         });

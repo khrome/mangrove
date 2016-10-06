@@ -119,8 +119,8 @@
         }
     }
     
-    DataService.prototype.collection = function(name){
-        if(!this.tables[name]){
+    DataService.prototype.collection = function(name, noError){
+        if(!this.tables[name] && !noError){
             throw new Error('unknown collection: '+name);
         }
         return this.tables[name];
@@ -131,7 +131,11 @@
             case 'string':
                 if(query.indexOf(' ') === -1 && query.indexOf("\n") === -1){
                     //it's a single world
-                    var collection = this.collection(query);
+                    var collection = this.collection(query, true);
+                    if(!collection){
+                        collection = new Indexed.Collection([], 'id' );
+                        this.tables[query] = collection;
+                    }
                     var set = new Indexed.Set(collection);
                     return {
                         find : function(query, cb){
@@ -159,6 +163,18 @@
                                 });
                             }else set.push(item);
                             if(cb) cb();
+                        },
+                        'delete' : function(where, cb){
+                            set.sift(where, function(){
+                                set.forEach(function(item){
+                                    var id = item[set.primaryKey];
+                                    var pos = set.ordering.indexOf(id);
+                                    if(pos === -1 && !err) err = new Error('Item not found in set:'+id);
+                                    collection.index[id] = false;
+                                    set.ordering.splice(pos, 1);
+                                });
+                                if(cb) cb();
+                            });
                         }
                     }
                 }else this.sql(query, callback);
@@ -176,8 +192,10 @@
                 var collections = match[2].split(',');
                 var collection = ob.collection(collections[0]);
                 var where = whereParser.parse(match[3]);
+                if(ob.log) ob.log('select', collections, where);
                 //todo: handle specific returns
                 var results = computeSetWhere(new Indexed.Set(collection), where);
+                if(ob.log) ob.log('select-result', results.toArray());
                 if(collections.length > 1) throw new Exception('multi-collection selection unavailable');
                 callback(undefined, results);
             }else{
@@ -186,9 +204,12 @@
                 if(match){
                     var returns = match[1];
                     var collections = match[2].split(',');
+                    if(ob.log) ob.log('select', collections);
                     if(collections.length > 1) throw new Exception('multi-collection selection unavailable');
                     var collection = ob.collection(collections[0]);
-                    if(returns == '*') callback(undefined, new Indexed.Set(collection));
+                    var result = new Indexed.Set(collection);
+                    if(ob.log) ob.log('select-result', result.toArray());
+                    if(returns == '*') callback(undefined, result);
                 }
             }
             match = query.match(/insert into (.*) \((.*)\) values \((.*)\)/i)
@@ -201,6 +222,8 @@
                 var valuesSets = match[3].split(/\) *, *\(/).map(function(set){
                     return eval('['+set+']'); //yes, this is crazy dangerous and needs to be replaced by a parser
                 });
+                
+                if(ob.log) ob.log('insert', collections, columns, valuesSets);
                 
                 var fullSet = new Indexed.Set(collection)
                 
@@ -234,6 +257,7 @@
                 var collections = match[1].split(',');
                 var collection = ob.collection(collections[0]);
                 var where = whereParser.parse(match[3]);
+                if(ob.log) ob.log('update', collections, values, where);
                 //todo: handle specific returns
                 var results = computeSetWhere(new Indexed.Set(collection), where);
                 if(collections.length > 1) throw new Exception('multi-collection updates not supported');
@@ -246,13 +270,33 @@
                 
                 callback(undefined);
             }
-            match = query.match(/delete (.*) from (.*) where (.*)/i)
+            match = query.match(/delete from (.*) where (.*)/i)
             if(match){
-                console.log('delete')
+                var collections = match[1].split(',');
+                var collection = ob.collection(collections[0]);
+                var where = whereParser.parse(match[2]);
+                var err;
+                if(ob.log) ob.log('delete', collections, where);
+                var results = computeSetWhere(new Indexed.Set(collection), where);
+                var deleting = results.toArray();
+                results.forEach(function(item){
+                    var id = item[results.primaryKey];
+                    var pos = results.ordering.indexOf(id);
+                    if(pos === -1 && !err) err = new Error('Item not found in set:'+id);
+                    collection.index[id] = false;
+                    results.ordering.splice(pos, 1);
+                });
+                if(ob.log) ob.log('delete-results', deleting, results.ordering, results.root.index);
+                if(err) return callback(err);
+                callback(undefined);
             }
             match = query.match(/create (.*)/)
             if(match){
-                console.log('create')
+                var collections = match[1].split(',');
+                if(ob.log) ob.log('delete', collections, where);
+                var collectionObject = new Indexed.Collection([], 'id' );
+                ob.tables[collections[0]] = collectionObject;
+                callback(undefined);
             }
         });
     }
@@ -260,13 +304,55 @@
     DataService.prototype.inquire = function(query){ //promise-based
         //todo: support mongo query documents through this interface
         var ob = this;
-        var promise = new Promise(function(resolve, reject){
-            ob.query(query, function(err, results){
-                if(err) return reject(err);
-                else return resolve(results);
+        if(query.indexOf(' ') === -1 && query.indexOf("\n") === -1){
+            var cbInterface = this.query(query);
+            return {
+                find : function(document){
+                    var promise = new Promise(function(resolve, reject){
+                        cbInterface.find(document, function(err, results){
+                            if(err) return reject(err);
+                            else return resolve(results);
+                        });
+                    });
+                    return promise;
+                },
+                update : function(updates, where){
+                    var promise = new Promise(function(resolve, reject){
+                        cbInterface.find(updates, where, function(err, results){
+                            if(err) return reject(err);
+                            else return resolve(results);
+                        });
+                    });
+                    return promise;
+                },
+                insert : function(item){
+                    var promise = new Promise(function(resolve, reject){
+                        cbInterface.insert(item, function(err, results){
+                            if(err) return reject(err);
+                            else return resolve(results);
+                        });
+                    });
+                    return promise;
+                },
+                'delete' : function(where){
+                    var promise = new Promise(function(resolve, reject){
+                        cbInterface.delete(where, function(err, results){
+                            if(err) return reject(err);
+                            else return resolve(results);
+                        });
+                    });
+                    return promise;
+                }
+            }
+        }else{
+            var promise = new Promise(function(resolve, reject){
+                ob.query(query, function(err, results){
+                    if(err) return reject(err);
+                    else return resolve(results);
+                });
             });
-        });
-        return promise;
+            return promise;
+        }
     }
     return DataService;
 }));

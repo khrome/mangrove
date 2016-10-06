@@ -1,9 +1,9 @@
 {
     "name": "mangrove",
     "homepage": "https://github.com/khrome/mangrove",
-    "version": "0.3.0",
+    "version": "0.3.2",
     "main": "mangrove.js",
-    "description": "memory conserving in-memory database built on indexed-set",
+    "description": "economical in-memory database built on indexed-set",
     "author": "Abbey Hawk Sparrow <@khrome> (http://patternweaver.com)",
     "contributors": [],
     "bugs": {
@@ -13,5 +13,17 @@
     "repository": {
         "type": "git",
         "url": "git@github.com:khrome/mangrove.git"
+    },
+    "dependencies": {
+        "sift": "*",
+        "indexed-set": "*",
+        "where-parser": "*",
+        "strangler": "*",
+        "browser-request": "*",
+        "request": "*"
+    },
+    "devDependencies": {
+        "mocha": "*",
+        "should": "*"
     }
 }

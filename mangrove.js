@@ -204,12 +204,26 @@
                 if(match){
                     var returns = match[1];
                     var collections = match[2].split(',');
-                    if(ob.log) ob.log('select', collections);
+                    if(ob.log) ob.log('select', collections, match[0]);
                     if(collections.length > 1) throw new Exception('multi-collection selection unavailable');
                     var collection = ob.collection(collections[0]);
                     var result = new Indexed.Set(collection);
                     if(ob.log) ob.log('select-result', result.toArray());
-                    if(returns == '*') callback(undefined, result);
+                    if(returns == '*'){
+                        callback(undefined, result);
+                    }else{
+                        returns = returns.split(',').map(function(str){return str.trim()});
+                        var trimmedSet = [];
+                        result.forEach(function(item){
+                            var copy = {};
+                            returns.forEach(function(ret){
+                                if(item[ret] !== undefined) copy[ret] = item[ret];
+                            });
+                            trimmedSet.push(copy);
+                        });
+                        trimmedSet.toArray = function(){ return trimmedSet; };
+                        callback(undefined, trimmedSet);
+                    }
                 }
             }
             match = query.match(/insert into (.*) \((.*)\) values \((.*)\)/i)

@@ -54,6 +54,18 @@ describe('Mangrove', function(){
                 );
             });
             
+            it('specific values for a full set', function(done){
+                datasource.query(
+                    'select age, name from users', 
+                    function(err, data){
+                        var results = data.toArray();
+                        results.length.should.equal(6);
+                        should.not.exists(results[0].id);
+                        done();
+                    }
+                );
+            });
+            
         });
         
         describe('inserts', function(){

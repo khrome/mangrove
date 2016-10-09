@@ -156,7 +156,7 @@ If callbacks aren't your thing, just use the `.inquire(<query>)` function and yo
 
 #####Mongo
 
-	datasource.query('users').find({
+	datasource.inquire('users').find({
 		age:{$gt:24}
 	}).then(function(data){
 		//react to the successful return
@@ -166,7 +166,7 @@ If callbacks aren't your thing, just use the `.inquire(<query>)` function and yo
 
 #####SQL
 
-	datasource.query(
+	datasource.inquire(
 		'select * from users where age > 24'
 	).then(function(data){
 		//react to the successful return

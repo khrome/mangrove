@@ -200,12 +200,12 @@ Upcoming Features
 - pushing filterFns into external DB procedures
 - Pivot Table UI for the service.
  
- Testing
- -------
- To run test, just type
+Testing
+-------
+To run test, just type
  
 	mocha
  		
- Enjoy,
+Enjoy,
  
  -Abbey Hawk Sparrow

@@ -174,31 +174,31 @@ More to come.
 Upcoming Features
 -----------------
  
- **Soon**
+**Soon**
  
- - Parenthetical Support
- - Implicit Joins
- - Client Library
- - Sets Fully Live (.and/.or/.not/.xor directly manipulate, switch to filters)
- - Optional Domain wrappers in object
- - Set based event subscription 
- - Authentication
- - sharding collections via PAXOS (distributed processing and storage)
- - Transactions
- - Ordering and Grouping
+- Parenthetical Support
+- Implicit Joins
+- Client Library
+- Sets Fully Live (.and/.or/.not/.xor directly manipulate, switch to filters)
+- Optional Domain wrappers in object
+- Set based event subscription 
+- Authentication
+- sharding collections via PAXOS (distributed processing and storage)
+- Transactions
+- Ordering and Grouping
  
-  **Someday**
+**Someday**
  
- - DB flushing (syncing to external datasources)
- - Mocks (replicas of DB clients for testing)
+- DB flushing (syncing to external datasources)
+- Mocks (replicas of DB clients for testing)
  	- mongo
  	- mysql
  	- SQLite
  	- postgres
  	- mondrian?
- - Indexes
- - pushing filterFns into external DB procedures
- - Pivot Table UI for the service.
+- Indexes
+- pushing filterFns into external DB procedures
+- Pivot Table UI for the service.
  
  Testing
  -------

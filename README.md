@@ -2,17 +2,17 @@ Mangrove
 ========
 Mangrove is an in-memory database for working with high-speed ephemeral data, or performing ad-hoc analysis within an application. It supports multiple query languages, and most of the options you would expect from a database without authorization or transactions.
 
-I'm currently using it as a DB stub in test cases and simple analysis, but it could be useful in other contexts.
-
-The core design objective is to reimagine a database as a stream cache, where selectors may be run of full or partial stored copies of a set or run across streaming data to monitor for the described states.
+I'm currently using it as a DB stub in test cases and simple analysis, but it is already useful in other contexts.
 
 Why?
 ----
 Much of modern application design is state monitoring of a dataset for a variety of customer contexts ('my friend tweeted!', 'I exited my current routed directions', 'The scale is over a capacity threshold') and rather than the complexity of development being in developing the business rules for the actual thing creating value... the bulk of the work is getting all the pieces in place to ask "What is the users current state?". Often the logic of the application is trivial, and the process of assembling this data tends to dictate overall application design.
 
-I propose that **the vast majority of all application effort is wasted** because we reach into the database to load enough data to then test the state in application space. What if there way another way? **Why not just tell the datasource what you care about and wait until that happens?**
+I propose that **the vast majority of all application effort is wasted** because we reach into the database to load enough data to then test the state in application space. But *wait*, perhaps there's another way.... **Why not just install a monitor using a DB selector and wait for the data to roll in?**
 
-**That** is what Mangrove will be... and while you wait for the full vision, it has a number of unique features when compared to other datasources:
+That's what this is moving toward: The database interface reimagined as a stream monitor which caches enough data to satisfy it's current queries, recieves updates from upstream selectors and requests data from it's ancestors when needed.
+
+Even without the full design, it has a number of unique features when compared to other datasources:
 
 - **Lightweight Sets** : Mangrove is built on top of [indexed-set](https://www.npmjs.com/package/indexed-set), which stores only orderings of objects inside it's sets and only references the object collection during internal operations. That way you can have many copies of a set processing which would otherwise overload memory.
 - **No Disk Access** : It keeps everything in memory, giving you memcache-like direct access speeds and mongo-like filter speeds.
@@ -154,6 +154,26 @@ In this mode collections are implicitly created.
 
 If callbacks aren't your thing, just use the `.inquire(<query>)` function and you'll get the promises you crave.
 
+#####Mongo
+
+	datasource.query('users').find({
+		age:{$gt:24}
+	}).then(function(data){
+		//react to the successful return
+	}).catch(function(err){
+		//react to an error
+	});
+
+#####SQL
+
+	datasource.query(
+		'select * from users where age > 24'
+	).then(function(data){
+		//react to the successful return
+	}).catch(function(err){
+		//react to an error
+	});
+
 ###Service
 
 There is experimental support for webservice access to the database... this will eventually be enhanced by client libraries optionally streaming a compressed format to each other.
@@ -181,9 +201,23 @@ Upcoming Features
 - Client Library
 - Sets Fully Live (.and/.or/.not/.xor directly manipulate, switch to filters)
 - Optional Domain wrappers in object
-- Set based event subscription 
+- Set based event subscription
+- inheritance across nodes (streaming between nodes/clusters)
+     - intelligent query fragmentation for repeated use filters
+     	- fingerprints queryFn, loosely attaches those to nodes
+ 			- memory problem
+ 				- push more filters up from the leaves
+ 				- shard within a cluster
+			- throughput problem
+				- push more filters down from the root
+				- shard clusters
+- sharding collections (clustering - PAXOS)
+
+*Core Finished*
+
+---
+
 - Authentication
-- sharding collections via PAXOS (distributed processing and storage)
 - Transactions
 - Ordering and Grouping
  

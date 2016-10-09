@@ -154,6 +154,22 @@ In this mode collections are implicitly created.
 
 If callbacks aren't your thing, just use the `.inquire(<query>)` function and you'll get the promises you crave.
 
+###Service
+
+There is experimental support for webservice access to the database... this will eventually be enhanced by client libraries optionally streaming a compressed format to each other.
+
+For now the only supported interface is `POST`ing the SQL to the `/sql` endpoint.
+
+Just run
+
+	mangrove -p <port number>
+	
+or (within the project)
+
+	npm start
+
+More to come.
+
  
  Upcoming Features
  -----------------
@@ -162,7 +178,7 @@ If callbacks aren't your thing, just use the `.inquire(<query>)` function and yo
  
  - Parenthetical Support
  - Implicit Joins
- - Service implementation (with client lib)
+ - Client Library
  - Sets Fully Live (.and/.or/.not/.xor directly manipulate, switch to filters)
  - Optional Domain wrappers in object
  - Set based event subscription 

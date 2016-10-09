@@ -99,7 +99,17 @@
                 }
             });
         }
-        //options.file
+        if(this.options.data){
+            var data = this.options.data;
+            Object.keys(data).forEach(function(collectionName){
+                console.log(collectionName, data[collectionName]);
+                ob.tables[collectionName] = new Indexed.Collection(
+                    data[collectionName], 
+                    'id'
+                );
+                console.log(collectionName, (new Indexed.Set(ob.tables[collectionName])).toArray() );
+            });
+        }
         //options.lazy
     }
     
@@ -121,6 +131,7 @@
     
     DataService.prototype.collection = function(name, noError){
         if(!this.tables[name] && !noError){
+            console.log(this.tables);
             throw new Error('unknown collection: '+name);
         }
         return this.tables[name];
@@ -202,7 +213,7 @@
                 //if there's no complex selection, let's test a simple one
                 match = query.match(/select (.*) from (.*)/i)
                 if(match){
-                    var returns = match[1];
+                    var returns = match[1].trim();
                     var collections = match[2].split(',');
                     if(ob.log) ob.log('select', collections, match[0]);
                     if(collections.length > 1) throw new Exception('multi-collection selection unavailable');
@@ -312,6 +323,7 @@
                 ob.tables[collections[0]] = collectionObject;
                 callback(undefined);
             }
+            return Error('no matches found!');
         });
     }
     

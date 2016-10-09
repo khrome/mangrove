@@ -14,6 +14,12 @@
         "type": "git",
         "url": "git@github.com:khrome/mangrove.git"
     },
+    "scripts" : {
+        "start": "./bin/mangrove"
+    },
+    "bin" : {
+        "mangrove": "./bin/mangrove"
+    },
     "dependencies": {
         "sift": "*",
         "indexed-set": "*",

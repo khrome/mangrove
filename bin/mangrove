@@ -1,0 +1,112 @@
+#!/usr/bin/env node
+var Sterling = require('sterling');
+var fs = require('fs');
+var art = require('ascii-art');
+var Mangrove = require('../mangrove.js');
+art.Figlet.fontPath = __dirname+'/Fonts/';
+var pkg = require('../package.json');
+var yargs = require('yargs');
+var Indexed = require('indexed-set');
+var fs = require('fs');
+var request = require('request');
+
+var mangrovePort = 11728;
+
+var argv = yargs
+    .usage('Usage: $0 <command> [options]')
+        .command('server', 'Run the appserver')
+            .example('$0 server -p <port>', 'run using the provided keys')
+            .alias('p', 'port')
+                .nargs('p', 1)
+                .describe('p', 'the port to serve on')
+                .default(mangrovePort)
+    .help('h')
+    .alias('h', 'help')
+    .epilog('copyright 2016')
+    .argv;
+    
+var mangrove = new Mangrove();
+
+var error = function(err, request, response, code){
+    console.log(message);
+    var message = err.message || err;
+    response.end(JSON.stringify({
+        message : message,
+        stack : err.stack,
+        error : true
+    }))
+}
+
+var app = new Sterling({
+    autoParseBody :true,
+    types: ['js'],
+    routes : {
+        '/stats/version' : {get:function(id){ //use package dep to determine client compatibility
+            this.res.end(JSON.stringify({version:pkg.version}));
+        }},
+        '/admin/load/testdata.json' : {get:function(){ //use package dep to determine client compatibility
+            var ob = this;
+            fs.readFile('testdata.json', function(err, buffer){
+                if(err) return error(err, this.req, this.res);
+                var data = JSON.parse(buffer.toString());
+                Object.keys(data).forEach(function(key){
+                    mangrove.tables[key] = new Indexed.Collection(data[key], 'id');
+                });
+                ob.res.end(JSON.stringify({loaded: true, data: data}));
+            });
+        }},
+        '/sql' : {
+            get:function(){ return error('query endpoints require POST', this.req, this.res);},
+            post:function(){
+                var sql = this.req.content;
+                var ob = this;
+                var queryError = mangrove.query(sql, function(err, results){
+                    if(err) return error(err, ob.req, ob.res);
+                    if(results){
+                        var arr = results.toArray();
+                        ob.res.end(JSON.stringify(arr));
+                    }else{
+                        ob.res.end('{"success":true}');
+                    }
+                });
+                if(queryError) return error(queryError, this.req, this.res);
+            }
+        },
+        '/query' : {get:function(){
+            this.res.end('{}');
+        }}
+    },
+    all : function(){
+        var ob = this;
+        setTimeout(function(){ //cancel anything that lasts longer than 10 seconds
+            ob.res.end('{"timeout":true, "error":"timeout:'+ob.req.url+'"}');
+        }, 10000);
+    }
+});
+
+//launch the app and listen on 8080
+var port = argv.p?parseInt(argv.p):mangrovePort;
+app.serve(port);
+
+//output landr text to show we're loaded and server stats
+art.font(pkg.name, 'cyberlarge', 'cyan', function(ascii){
+	console.log(ascii);
+	console.log(pkg.description);
+	console.log('['+art.style(' ready ', 'green')+']=[ @'+
+	   art.style(' localhost ', 'white')+']=['+
+	   art.style(' port '+port+' ', 'white')+']');
+});
+
+//*
+request(
+    {uri: 'http://localhost:8081/admin/load/testdata.json'}, 
+    function(err, res, body){
+        request({
+            uri: 'http://localhost:8081/sql',
+            method:'POST',
+            body: "select * from users"
+        }, function(err, res, body){
+            console.log('>>>', body);
+        });
+    }
+);//*/

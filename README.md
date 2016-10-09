@@ -171,8 +171,8 @@ or (within the project)
 More to come.
 
  
- Upcoming Features
- -----------------
+Upcoming Features
+-----------------
  
  **Soon**
  

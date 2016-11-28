@@ -137,6 +137,15 @@
         return this.tables[name];
     }
     
+    DataService.prototype.toJSON = function(formatted){
+        var result = {};
+        var ob = this
+        Object.keys(this.tables).forEach(function(tableName){
+            result[tableName] = (new Indexed.Set(ob.tables[tableName])).toArray();
+        });
+        return !!formatted?JSON.stringify(result):JSON.stringify(result, undefined, '    ');
+    }
+    
     DataService.prototype.query = function(query, callback){
         switch(typeof query){
             case 'string':
@@ -250,8 +259,7 @@
                 
                 if(ob.log) ob.log('insert', collections, columns, valuesSets);
                 
-                var fullSet = new Indexed.Set(collection)
-                
+                var fullSet = new Indexed.Set(collection);
                 valuesSets.forEach(function(set){
                     var newItem = {};
                     columns.forEach(function(columnName, index){
@@ -318,10 +326,10 @@
             match = query.match(/create (.*)/)
             if(match){
                 var collections = match[1].split(',');
-                if(ob.log) ob.log('delete', collections, where);
+                if(ob.log) ob.log('create', collections, where);
                 var collectionObject = new Indexed.Collection([], 'id' );
                 ob.tables[collections[0]] = collectionObject;
-                callback(undefined);
+                if(callback) callback(undefined);
             }
             return Error('no matches found!');
         });

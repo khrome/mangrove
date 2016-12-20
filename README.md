@@ -1,5 +1,9 @@
 Mangrove
 ========
+[![NPM version](https://img.shields.io/npm/v/mangrove.svg)]()
+[![npm](https://img.shields.io/npm/dt/mangrove.svg)]()
+[![Travis](https://img.shields.io/travis/khrome/mangrove.svg)]()
+
 Mangrove is an in-memory database for working with high-speed ephemeral data, or performing ad-hoc analysis within an application. It supports multiple query languages, and most of the options you would expect from a database without authorization or transactions.
 
 I'm currently using it as a DB stub in test cases and simple analysis, but it is already useful in other contexts.

@@ -15,7 +15,8 @@
         "url": "git@github.com:khrome/mangrove.git"
     },
     "scripts" : {
-        "start": "./bin/mangrove"
+        "start": "./bin/mangrove",
+        "test": "mocha"
     },
     "bin" : {
         "mangrove": "./bin/mangrove"

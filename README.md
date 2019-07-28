@@ -33,29 +33,29 @@ Returned sets are instances of [indexed-set](https://www.npmjs.com/package/index
 
 ####Creating an instance
 
-	var datasource = new Mangrove({
-		file:'data.json'
-	});
+    var datasource = new Mangrove({
+        file:'data.json'
+    });
 
 ###Using SQL
 
 ####Selecting
 
-	datasource.query(
-        'select * from users where age > 24', 
+    datasource.query(
+        'select * from users where age > 24',
         function(err, data){
             //data is an Indexed.Set
         }
     );
-    
+
 #####Selecting: Columns
 
 As a rule of thumb: **always select on '*'**
 
 If you would like to get a specific set of columns back (for a more compact set), that is supported... however you must remember that in writing a custom set, you have now rendered the the set to a new set of object, thus your result set will just be an object return. So that returns can be handled uniformly, these arrays have a .toArray() convenience function with returns themselves. Depending on the use case it's highly encouraged to return the full set, given that it will be even *less* memory that the truncated set. There are some cases (like stubbing databases) where you still want this behavior.
 
-	datasource.query(
-        'select name, age from users', 
+    datasource.query(
+        'select name, age from users',
         function(err, data){
             //data is an Array which is Indexed.Set compatible
         }
@@ -63,39 +63,39 @@ If you would like to get a specific set of columns back (for a more compact set)
 
 ####Inserting
 
-	datasource.query(
+    datasource.query(
         'insert into users (age, name, value) values '+
-        	'(20, "john", "dsjdfjdb832yg936"), '+
-        	'(20, "paul", "dsjdsdsfmg2ygg26"), '+
-        	'(19, "george", "ddfdfdb832yggr6"), '+
-        	'(22, "richard", "fdjkdfhhir987ere")', 
+        '(20, "john", "dsjdfjdb832yg936"), '+
+        '(20, "paul", "dsjdsdsfmg2ygg26"), '+
+        '(19, "george", "ddfdfdb832yggr6"), '+
+        '(22, "richard", "fdjkdfhhir987ere")',
         function(err){
-        	//if(!err), everything went fine
+        //if(!err), everything went fine
         }
     );
-    
+
 ####Updating
 
-	datasource.query(
-        'update users set name="ringo",likes="gardens" where id="fdjkdfhhir987ere"', 
+    datasource.query(
+        'update users set name="ringo",likes="gardens" where id="fdjkdfhhir987ere"',
         function(err){
             //if(!err), everything went fine
         }
     );
-    
+
 ####Deleting
 
-	datasource.query(
-        'delete from users where name="stu"', 
+    datasource.query(
+        'delete from users where name="stu"',
         function(err){
             //if(!err), everything went fine
         }
     );
-    
+
 ####Creating
 
-	datasource.query(
-        'create songwriters', 
+    datasource.query(
+        'create songwriters',
         function(err){
             //if(!err), everything went fine
         }
@@ -107,52 +107,52 @@ In this mode collections are implicitly created.
 
 ####Selecting
 
-	datasource.query('users').find({
-		age:{$gt:24}
-	}, function(err, data){
+    datasource.query('users').find({
+        age:{$gt:24}
+    }, function(err, data){
         //data is an Indexed.Set
     });
 
 ####Inserting
 
-	datasource.query('users').insert([{
-		name : "john",
-		age : 20,
-		id: "dsjdfjdb832yg936"
-	},{
-		name : "paul",
-		age : 20,
-		id: "dsjdsdsfmg2ygg26"
-	},{
-		name : "george",
-		age : 19,
-		id: "ddfdfdb832yggr6"
-	},{
-		name : "richard",
-		age : 22,
-		id: "fdjkdfhhir987ere"
-	}],function(err){
-    	//if(!err), everything went fine
+    datasource.query('users').insert([{
+        name : "john",
+        age : 20,
+        id: "dsjdfjdb832yg936"
+    },{
+        name : "paul",
+        age : 20,
+        id: "dsjdsdsfmg2ygg26"
+    },{
+        name : "george",
+        age : 19,
+        id: "ddfdfdb832yggr6"
+    },{
+        name : "richard",
+        age : 22,
+        id: "fdjkdfhhir987ere"
+    }],function(err){
+    //if(!err), everything went fine
     });
-    
+
 ####Updating
 
-	datasource.query('users').update({
-		name : "ringo",
-		likes : "gardens"
-	}, {
-		id: "fdjkdfhhir987ere"
-	}, function(err){
-		//if(!err), everything went fine				
-	});
+    datasource.query('users').update({
+        name : "ringo",
+        likes : "gardens"
+    }, {
+        id: "fdjkdfhhir987ere"
+    }, function(err){
+        //if(!err), everything went fine
+    });
 
 ####Delete
 
-	datasource.query('users').delete({
-		name : "stu"
-	}, function(err){
-		//if(!err), everything went fine				
-	});
+    datasource.query('users').delete({
+        name : "stu"
+    }, function(err){
+        //if(!err), everything went fine
+    });
 
 ###Promises
 
@@ -160,23 +160,23 @@ If callbacks aren't your thing, just use the `.inquire(<query>)` function and yo
 
 #####Mongo
 
-	datasource.inquire('users').find({
-		age:{$gt:24}
-	}).then(function(data){
-		//react to the successful return
-	}).catch(function(err){
-		//react to an error
-	});
+    datasource.inquire('users').find({
+        age:{$gt:24}
+    }).then(function(data){
+        //react to the successful return
+    }).catch(function(err){
+        //react to an error
+    });
 
 #####SQL
 
-	datasource.inquire(
-		'select * from users where age > 24'
-	).then(function(data){
-		//react to the successful return
-	}).catch(function(err){
-		//react to an error
-	});
+    datasource.inquire(
+        'select * from users where age > 24'
+    ).then(function(data){
+        //react to the successful return
+    }).catch(function(err){
+        //react to an error
+    });
 
 ###Service
 
@@ -186,20 +186,20 @@ For now the only supported interface is `POST`ing the SQL to the `/sql` endpoint
 
 Just run
 
-	mangrove -p <port number>
-	
+    mangrove -p <port number>
+
 or (within the project)
 
-	npm start
+    npm start
 
 More to come.
 
- 
+
 Upcoming Features
 -----------------
- 
+
 **Soon**
- 
+
 - Parenthetical Support
 - Implicit Joins
 - Client Library
@@ -207,14 +207,14 @@ Upcoming Features
 - Optional Domain wrappers in object
 - Set based event subscription
 - inheritance across nodes (streaming between nodes/clusters)
-     - intelligent query fragmentation for repeated use filters
-     	- fingerprints queryFn, loosely attaches those to nodes
- 			- memory problem
- 				- push more filters up from the leaves
- 				- shard within a cluster
-			- throughput problem
-				- push more filters down from the root
-				- shard clusters
+    - intelligent query fragmentation for repeated use filters
+    - fingerprints queryFn, loosely attaches those to nodes
+            - memory problem
+                - push more filters up from the leaves
+                - shard within a cluster
+            - throughput problem
+                - push more filters down from the root
+                - shard clusters
 - sharding collections (clustering - PAXOS)
 
 *Core Finished*
@@ -224,26 +224,26 @@ Upcoming Features
 - Authentication
 - Transactions
 - Ordering and Grouping
- 
+
 **Someday**
- 
+
 - DB flushing (syncing to external datasources)
 - Mocks (replicas of DB clients for testing)
- 	- mongo
- 	- mysql
- 	- SQLite
- 	- postgres
- 	- mondrian?
+     - mongo
+     - mysql
+     - SQLite
+     - postgres
+     - mondrian?
 - Indexes
 - pushing filterFns into external DB procedures
 - Pivot Table UI for the service.
- 
+
 Testing
 -------
 To run test, just type
- 
-	mocha
- 		
+
+    mocha
+
 Enjoy,
- 
+
  -Abbey Hawk Sparrow

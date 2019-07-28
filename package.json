@@ -1,7 +1,7 @@
 {
     "name": "mangrove",
     "homepage": "https://github.com/khrome/mangrove",
-    "version": "0.4.4",
+    "version": "0.5.0",
     "main": "mangrove.js",
     "description": "economical in-memory database built on indexed-set",
     "author": "Abbey Hawk Sparrow <@khrome> (http://patternweaver.com)",
@@ -14,11 +14,11 @@
         "type": "git",
         "url": "git@github.com:khrome/mangrove.git"
     },
-    "scripts" : {
+    "scripts": {
         "start": "./bin/mangrove",
         "test": "mocha"
     },
-    "bin" : {
+    "bin": {
         "mangrove": "./bin/mangrove"
     },
     "dependencies": {

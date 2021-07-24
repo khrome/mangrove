@@ -8,37 +8,37 @@
     };
     if (typeof define === 'function' && define.amd) {
         define([
-            'indexed-set', 
-            'sift', 
-            'where-parser', 
-            'strangler', 
+            'indexed-set',
+            'sift',
+            'where-parser',
+            'strangler',
             'browser-request'
         ], function(a, b, c, request){
             return factory(a, b, c, {readFile:clientReadFileGenerator(request)});
         });
     }else if (typeof module === 'object' && module.exports){
         module.exports = factory(
-            require('indexed-set'), 
-            require('sift'), 
+            require('indexed-set'),
+            require('sift'),
             require('where-parser'),
             require('strangler'),
             require('fs')
         );
     }else{
         root.returnExports = factory(
-            root.IndexedSet, 
-            root.Sift, 
+            root.IndexedSet,
+            root.Sift,
             root.WhereParser,
             root.Strangler,
             {readFile:clientReadFileGenerator(root.request)}
         );
     }
 }(this, function(Indexed, Sift, WhereParser, strings, fs){
-    
+
     //var jobs = [];
     //var active = 0;
     var whereParser = new WhereParser();
-    
+
     function computeSetWhere(set, where){
         var results = set;
         var fullSet = results.clone();
@@ -57,14 +57,14 @@
                                 );
                             }
                             results = results.clone();
-                            var predicate = fullSet.clone().with(part.key, part.operator, part.value);
+                            var predicate = results.with(part.key, part.operator, part.value);
                             results[previousConjunction.value](predicate);
                             previousConjunction = undefined;
                         }else{
                             results = results.clone();
                             results.with(
-                                part.key, 
-                                part.operator, 
+                                part.key,
+                                part.operator,
                                 part.value
                             );
                         }
@@ -77,7 +77,7 @@
         });
         return results;
     }
-    
+
     function DataService(options){
         this.options = options || {};
         this.tables = {};
@@ -91,7 +91,7 @@
                 if(data){
                     Object.keys(data).forEach(function(collectionName){
                         ob.tables[collectionName] = new Indexed.Collection(
-                            data[collectionName], 
+                            data[collectionName],
                             'id'
                         );
                     });
@@ -104,7 +104,7 @@
             Object.keys(data).forEach(function(collectionName){
                 console.log(collectionName, data[collectionName]);
                 ob.tables[collectionName] = new Indexed.Collection(
-                    data[collectionName], 
+                    data[collectionName],
                     'id'
                 );
                 console.log(collectionName, (new Indexed.Set(ob.tables[collectionName])).toArray() );
@@ -112,12 +112,12 @@
         }
         //options.lazy
     }
-    
+
     DataService.prototype.ready = function(cb){
         if((!this.jobs) || this.active === 0) return cb();
         else return this.jobs.push(cb);
     }
-    
+
     DataService.prototype.completed = function(){
         this.active--;
         if(this.active === 0){
@@ -128,7 +128,7 @@
             })
         }
     }
-    
+
     DataService.prototype.collection = function(name, noError){
         if(!this.tables[name] && !noError){
             console.log(this.tables);
@@ -136,7 +136,7 @@
         }
         return this.tables[name];
     }
-    
+
     DataService.prototype.toJSON = function(formatted){
         var result = {};
         var ob = this
@@ -145,7 +145,7 @@
         });
         return !!formatted?JSON.stringify(result):JSON.stringify(result, undefined, '    ');
     }
-    
+
     DataService.prototype.query = function(query, callback){
         switch(typeof query){
             case 'string':
@@ -201,7 +201,7 @@
                 break;
         }
     }
-    
+
     DataService.prototype.sql = function(query, callback){
         var ob = this;
         this.ready(function(){
@@ -256,9 +256,9 @@
                 var valuesSets = match[3].split(/\) *, *\(/).map(function(set){
                     return eval('['+set+']'); //yes, this is crazy dangerous and needs to be replaced by a parser
                 });
-                
+
                 if(ob.log) ob.log('insert', collections, columns, valuesSets);
-                
+
                 var fullSet = new Indexed.Set(collection);
                 valuesSets.forEach(function(set){
                     var newItem = {};
@@ -267,7 +267,7 @@
                     });
                     fullSet.push(newItem);
                 });
-                
+
                 callback(undefined);
             }else{
                 match = query.match(/insert into (.*) values (.*)/i)
@@ -294,13 +294,13 @@
                 //todo: handle specific returns
                 var results = computeSetWhere(new Indexed.Set(collection), where);
                 if(collections.length > 1) throw new Exception('multi-collection updates not supported');
-                
+
                 results.forEach(function(item, index){
                     values.forEach(function(set){
                         item[set.name] = typeof set.value == 'function'?set.value(item):set.value;
                     });
                 });
-                
+
                 callback(undefined);
             }
             match = query.match(/delete from (.*) where (.*)/i)
@@ -334,7 +334,7 @@
             return Error('no matches found!');
         });
     }
-    
+
     DataService.prototype.inquire = function(query){ //promise-based
         //todo: support mongo query documents through this interface
         var ob = this;

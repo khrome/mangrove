@@ -1,112 +1,223 @@
 #!/usr/bin/env node
-var Sterling = require('sterling');
-var fs = require('fs');
 var art = require('ascii-art');
-var Mangrove = require('../mangrove.js');
-art.Figlet.fontPath = __dirname+'/Fonts/';
-var pkg = require('../package.json');
-var yargs = require('yargs');
-var Indexed = require('indexed-set');
+var Figlet = require('ascii-art-font');
+var CLApp = require('app-term-kit');
+var os = require('os');
 var fs = require('fs');
-var request = require('request');
+var path = require('path');
+var read = require('read');
+var arrays = require('async-arrays');
+var makeServer = require('../server');
+var pkg = require('../package.json');
+var util = require('../util.js');
+var request = require('request-as-request');
+var Indexed = require('indexed-set');
 
-var mangrovePort = 11728;
+const PAYLOAD = util.payload;
+if(PAYLOAD.defaultMode !== 'json') PAYLOAD.defaultMode = 'json';
 
-var argv = yargs
-    .usage('Usage: $0 <command> [options]')
-        .command('server', 'Run the appserver')
-            .example('$0 server -p <port>', 'run using the provided keys')
-            .alias('p', 'port')
-                .nargs('p', 1)
-                .describe('p', 'the port to serve on')
-                .default(mangrovePort)
-    .help('h')
-    .alias('h', 'help')
-    .epilog('copyright 2016')
-    .argv;
-    
-var mangrove = new Mangrove();
+Figlet.fontPath = path.join(__dirname, 'Fonts')+'/'
 
-var error = function(err, request, response, code){
-    console.log(message);
-    var message = err.message || err;
-    response.end(JSON.stringify({
-        message : message,
-        stack : err.stack,
-        error : true
-    }))
+var app = new CLApp(pkg.name, {
+    copyright : 'Abbey Hawk Sparrow',
+    trademark : 'Abbey Hawk Sparrow',
+    copystart : '2014',
+    defaults : `{
+    // defaults go here.
+    "bitdepth": 2,
+    "port": 33333
+}`
+});
+
+var hdr;
+
+var makeHeader = function(config, cb){
+    if(hdr) return cb(null, hdr);
+    art.font(pkg.name, 'cyberlarge', function(err, ascii){
+        cb(null, (hdr = [
+            ascii,
+            pkg.description,
+            '['+ //todo: make this variable, based on passed data
+                art.style(' ready ', 'green', true)+']=[ @'+
+                art.style(' localhost ', 'white', true)+']=['+
+                art.style(' port '+config.port+' ', 'white', true)+
+            ']'
+        ].join("\n")+"\n"))
+    });
 }
 
-var app = new Sterling({
-    autoParseBody :true,
-    types: ['js'],
-    routes : {
-        '/stats/version' : {get:function(id){ //use package dep to determine client compatibility
-            this.res.end(JSON.stringify({version:pkg.version}));
-        }},
-        '/admin/load/testdata.json' : {get:function(){ //use package dep to determine client compatibility
-            var ob = this;
-            fs.readFile('testdata.json', function(err, buffer){
-                if(err) return error(err, this.req, this.res);
-                var data = JSON.parse(buffer.toString());
-                Object.keys(data).forEach(function(key){
-                    mangrove.tables[key] = new Indexed.Collection(data[key], 'id');
-                });
-                ob.res.end(JSON.stringify({loaded: true, data: data}));
-            });
-        }},
-        '/sql' : {
-            get:function(){ return error('query endpoints require POST', this.req, this.res);},
-            post:function(){
-                var sql = this.req.content;
-                var ob = this;
-                var queryError = mangrove.query(sql, function(err, results){
-                    if(err) return error(err, ob.req, ob.res);
-                    if(results){
-                        var arr = results.toArray();
-                        ob.res.end(JSON.stringify(arr));
-                    }else{
-                        ob.res.end('{"success":true}');
-                    }
-                });
-                if(queryError) return error(queryError, this.req, this.res);
+var log = function(str){
+    console.log(str);
+}
+
+var query = function(opts, q, cb){
+    request({
+        uri: (opts.host || 'http://localhost:33333')+'/query',
+        method:'POST',
+        json : q
+    }, function(err, res, body){
+        cb(err, body)
+    });
+}
+
+var load = function(mangrove, file, mode, cb){
+    //OMG, pls Stream!!!
+    fs.readFile(file, function(err, text){
+        if(err) return cb(err);
+        var data;
+        try{
+            data = JSON.parse(text);
+        }catch(ex){
+            return cb(ex);
+        }
+        return cb(null, data);
+    });
+}
+
+app.useable(function(err){
+    app.config(function(err, conf, writeConfig){
+        app.command({
+            name:'server',
+            description: 'Run an instance of mangrove server',
+            examples: [[
+                '$0 server -p 8081', 'Run an instance of mangrove '
+            ]],
+            action : function(argv, target, complete){
+                if(argv.collection && !Array.isArray(argv.collection)){
+                    argv.collection = [argv.collection];
+                }
+                var server = makeServer({});
+                var mangrove = server.mangrove; //the instance of all the stuffs
+                if(argv.debug) mangrove.log = function(type, data){
+                    console.log(type, data);
+                };
+                var runServer = function(){
+                    server.listen(conf.port,  function(err){
+                        makeHeader(conf, function(err, header){
+                            console.log(header); //in terminal, not on log
+                            log('Server started on port '+conf.port+'.');
+                        });
+                    });
+                };
+                if(argv.collection){
+                    arrays.forEachEmission(argv.collection, function(fileName, index, done){
+                        load(mangrove, fileName, 'fs', function(err, data){
+                            if(err) return cb(err);
+                            Object.keys(data).forEach(function(key){
+                                mangrove.tables[key] = new Indexed.Collection(data[key], 'id');
+                            });
+                            done();
+                        });
+                    }, function(){
+                        runServer();
+                    })
+                }else{
+                    runServer();
+                }
             }
-        },
-        '/query' : {get:function(){
-            this.res.end('{}');
-        }}
-    },
-    all : function(){
-        var ob = this;
-        setTimeout(function(){ //cancel anything that lasts longer than 10 seconds
-            ob.res.end('{"timeout":true, "error":"timeout:'+ob.req.url+'"}');
-        }, 10000);
-    }
-});
-
-//launch the app and listen on 8080
-var port = argv.p?parseInt(argv.p):mangrovePort;
-app.serve(port);
-
-//output landr text to show we're loaded and server stats
-art.font(pkg.name, 'cyberlarge', 'cyan', function(ascii){
-	console.log(ascii);
-	console.log(pkg.description);
-	console.log('['+art.style(' ready ', 'green')+']=[ @'+
-	   art.style(' localhost ', 'white')+']=['+
-	   art.style(' port '+port+' ', 'white')+']');
-});
-
-//*
-request(
-    {uri: 'http://localhost:8081/admin/load/testdata.json'}, 
-    function(err, res, body){
-        request({
-            uri: 'http://localhost:8081/sql',
-            method:'POST',
-            body: "select * from users"
-        }, function(err, res, body){
-            console.log('>>>', body);
         });
-    }
-);//*/
+        app.command({
+            name:'client',
+            description: 'Run an interactive client ',
+            examples: [[
+                '$0 client -p 8081', 'Run client against port 8081'
+            ]],
+            action : function(argv, target, complete){
+                var prompt = '['+(argv.host || 'localhost')+']>';
+                var input;
+                var agg = '';
+                var mode;
+                var validInput
+                var requestLine = function(cb){
+                    read({prompt:prompt}, function(err, input){
+                        agg += input;
+                        var trimmed = agg.trim();
+                        if(trimmed === 'exit') return cb(new Error('exit'))
+                        if(trimmed[0] === '{' && trimmed[trimmed.length-1] === '}'){
+                            validInput = Payload.decode(agg);
+                            mode = 'json';
+                            agg = '';
+                            input = null;
+                        }
+                        if(trimmed[trimmed.length-1] === ';'){
+                            agg = agg.trim();
+                            validInput = agg.substring(0, agg.length-1);
+                            agg = '';
+                            mode = 'sql';
+                        }
+                        if(validInput){
+                            cb(null, validInput, mode);
+                        }else requestLine(cb);
+                    });
+                }
+                var requestLoop = function(){
+                    requestLine(function(err, input, mode){
+                        if(input && mode){
+                            query({}, input, function(err, data){
+                                var thisErr = err || (data.error && new Error(data.message));
+                                if(thisErr){
+                                    console.log('[ ERROR: '+thisErr.message+' ]');
+                                }else{//success!
+                                    art.table({
+                                        width : 80,
+                                        data : data,
+                                        bars : 'double',
+                                        headerStyle : 'yellow',
+                                        dataStyle : 'bright_white',
+                                        //justify:true,
+                                        borderColor : 'gray'
+                                    }, function(table){
+                                        if(err){
+                                            console.log('[ ERROR: '+err.message+' ]');
+                                        }else console.log(table);
+                                    })
+                                }
+                                requestLoop();
+                            });
+                        }
+                        if(err){
+                            if(err.message === 'exit'){
+                                console.log('Goodbye.')
+                            }else{
+                                console.log(err)
+                            }
+                        }
+                    })
+                };
+                requestLoop();
+            }
+        });
+        app.command({
+            name:'query',
+            description: 'Run an instance of mangrove server',
+            examples: [[
+                '$0 query ""', 'Run this query against the remote server'
+            ]],
+            action : function(argv, target, complete){
+
+            }
+        });
+        app.argument('directory', 'string','the directory to use for databases', 1);
+        app.argument('layout', 'string','layout to use for data (when autosaving on quit)', 1, [
+            'fs', 'fs-slabs', 'fs-leaves'
+        ]);
+        app.argument('mode', 'string','how to manage memory', 1, [
+            'memory'
+        ]);
+        app.argument('format', 'string','the format to output', 1, [
+            'json', 'cbor', 'csv'
+        ]);
+        app.argument('host', 'string', 'the host to request data against', 1);
+        app.argument('collection', 'string', 'a datafile to load', 1);
+        app.argument('port', 'string', 'the port to run the server on', 1);
+        app.argument('debug', 'boolean', 'the port to run the server on');
+        makeHeader(conf, function(err, header){
+            app.header(header);
+            app.footer();
+            app.run(function(ex){
+                if(ex) throw ex;
+            });
+        });
+        app.help();
+    });
+});

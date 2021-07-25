@@ -8,28 +8,6 @@ Mangrove is an in-memory database for working with high-speed ephemeral data, or
 
 I'm currently using it as a DB stub in test cases and simple analysis, but it is already useful in other contexts.
 
-DataMesh
---------
-If you zoom out to a Database's core functions, you have: Storage, Replication and Indexing. Acknowledging this (and inspired by [TokyoCabinet/tkrzw](https://en.wikipedia.org/wiki/Tkrzw)'s view of indexing and storage) I suddenly wanted a DB more concentrated on edge changes, where filters could live for days or weeks with little to no impact as the primary data would sit in-memory (this library was originally built when [Hana](https://en.wikipedia.org/wiki/SAP_HANA) was being developed) or in-stream. This manifested with this library, which... while implemented as a DB currently, has much wider uses as a fragmented datastore in a distributed system. So a DataMesh: `selects/subscribes data for downstream peers`, `synchronizes it's datastore with it's incoming stream` and eventually may support `indexing` (someday, when it supports data on disk, since the current in-memory scheme allows sets to be simple indexes by themselves)
-
-Why?
-----
-Much of modern application design is state monitoring of a dataset for a variety of customer contexts ('my friend tweeted!', 'I exited my current routed directions', 'The scale is over a capacity threshold') and rather than the complexity of development being in developing the business rules for the actual thing creating value... the bulk of the work is getting all the pieces in place to ask "What is the users current state?". Often the logic of the application is trivial, and the process of assembling this data tends to dictate overall application design.
-
-I propose that **the vast majority of all application effort is wasted** because we reach into the database to load enough data to then test the state in application space. But *wait*, perhaps there's another way.... **Why not just install a monitor using a DB selector and wait for the data to roll in?**
-
-That's what this is moving toward: The database interface reimagined as a stream monitor which caches enough data to satisfy it's current queries, recieves updates from upstream selectors and requests data from it's ancestors when needed.
-
-Even without the full design, it has a number of unique features when compared to other datasources:
-
-- **Lightweight Sets** : Mangrove is built on top of [indexed-set](https://www.npmjs.com/package/indexed-set), which stores only orderings of objects inside it's sets and only references the object collection during internal operations. That way you can have many copies of a set processing which would otherwise overload memory.
-- **No Disk Access** : It keeps everything in memory, giving you memcache-like direct access speeds and mongo-like filter speeds.
-- **Multiple Query Languages** : It allows [SQL](https://en.wikipedia.org/wiki/SQL) or [Mongo Query Documents](https://docs.mongodb.com/manual/crud/) queries which are then mapped onto lazily evaluated internal set filters, meaning: common performance characteristics, regardless of query type.
-- **Filter Centric** : all operations contribute to a stack of filters internal to the set, which allows incoming data to be correctly routed, and changes to be resolved, keeping the lightweight sets up-to-date with minimal work.
-- **Native JS** : Because the entire stack is JS you can embed it inside a desktop app, a server app, on a mobile device, put it in a test script, ship it to the browser, run it as a service or embed it in your own service. Think of it like [pointbase](https://en.wikipedia.org/wiki/PointBase) but reimagined by users of [mongo](https://www.mongodb.com) and [redis](http://redis.io).
-- **Persistent Sets** : Because it's cheap to make copies and subsets it's also easy to keep copies around for long-term interaction.
-
-
 Usage
 -----
 
@@ -196,7 +174,7 @@ If callbacks aren't your thing, just use the `.inquire(<query>)` function and yo
 ##### Mongo - Await
 ```js
     try{
-        let data = datasource.inquire('users').find({
+        let data = await datasource.inquire('users').find({
             age:{$gt:24}
         });
         //react to the successful return
@@ -209,7 +187,7 @@ If callbacks aren't your thing, just use the `.inquire(<query>)` function and yo
 
 ```js
     try{
-        let data = datasource.inquire('select * from users where age > 24');
+        let data = await datasource.inquire('select * from users where age > 24');
         //react to the successful return
     }catch(ex){
         //react to an error
@@ -242,6 +220,27 @@ You can connect to local or remote services using the `mangrove client` command 
     mangrove client --port <port number> --host <host>
 ```
 
+DataMesh
+--------
+If you zoom out to a Database's core functions, you have: Storage, Replication and Indexing. Acknowledging this (and inspired by [TokyoCabinet/tkrzw](https://en.wikipedia.org/wiki/Tkrzw)'s view of indexing and storage) I suddenly wanted a DB more concentrated on edge changes, where filters could live for days or weeks with little to no impact as the primary data would sit in-memory (this library was originally built when [Hana](https://en.wikipedia.org/wiki/SAP_HANA) was being developed) or in-stream. This manifested with this library, which... while implemented as a DB currently, has much wider uses as a fragmented datastore in a distributed system. So a DataMesh: `selects/subscribes data for downstream peers`, `synchronizes it's datastore with it's incoming stream` and eventually may support `indexing` (someday, when it supports data on disk, since the current in-memory scheme allows sets to be simple indexes by themselves)
+
+Why?
+----
+Much of modern application design is state monitoring of a dataset for a variety of customer contexts ('my friend tweeted!', 'I exited my current routed directions', 'The scale is over a capacity threshold') and rather than the complexity of development being in developing the business rules for the actual thing creating value... the bulk of the work is getting all the pieces in place to ask "What is the users current state?". Often the logic of the application is trivial, and the process of assembling this data tends to dictate overall application design.
+
+I propose that **the vast majority of all application effort is wasted** because we reach into the database to load enough data to then test the state in application space. But *wait*, perhaps there's another way.... **Why not just install a monitor using a DB selector and wait for the data to roll in?**
+
+That's what this is moving toward: The database interface reimagined as a stream monitor which caches enough data to satisfy it's current queries, recieves updates from upstream selectors and requests data from it's ancestors when needed.
+
+Even without the full design, it has a number of unique features when compared to other datasources:
+
+- **Lightweight Sets** : Mangrove is built on top of [indexed-set](https://www.npmjs.com/package/indexed-set), which stores only orderings of objects inside it's sets and only references the object collection during internal operations. That way you can have many copies of a set processing which would otherwise overload memory.
+- **No Disk Access** : It keeps everything in memory, giving you memcache-like direct access speeds and mongo-like filter speeds.
+- **Multiple Query Languages** : It allows [SQL](https://en.wikipedia.org/wiki/SQL) or [Mongo Query Documents](https://docs.mongodb.com/manual/crud/) queries which are then mapped onto lazily evaluated internal set filters, meaning: common performance characteristics, regardless of query type.
+- **Filter Centric** : all operations contribute to a stack of filters internal to the set, which allows incoming data to be correctly routed, and changes to be resolved, keeping the lightweight sets up-to-date with minimal work.
+- **Native JS** : Because the entire stack is JS you can embed it inside a desktop app, a server app, on a mobile device, put it in a test script, ship it to the browser, run it as a service or embed it in your own service. Think of it like [pointbase](https://en.wikipedia.org/wiki/PointBase) but reimagined by users of [mongo](https://www.mongodb.com) and [redis](http://redis.io).
+- **Persistent Sets** : Because it's cheap to make copies and subsets it's also easy to keep copies around for long-term interaction.
+
 Upcoming Features
 -----------------
 
@@ -249,12 +248,11 @@ The current major focus of this is to simplify generating and loading database c
 
 **Soon™**
 
-- Parenthetical Support
-- Implicit Joins (via lightweight "join sets" (n-way))
+- Parenthetical/Joins Support (via lightweight "join sets" (n-way))
 - Client Library (Usable as an ORM!)
 - Sets Fully Live (.and/.or/.not/.xor directly manipulate, switch to filters)
-- Optional Domain wrappers in object
-- Set based event subscription
+- Sandboxing - Optional Domain wrappers in object
+- Set pooling - ensuring duplicate queries only allocate 1 resource set
 - inheritance across nodes (streaming between nodes/clusters)
     - intelligent query fragmentation for repeated use filters
     - fingerprints queryFn, loosely attaches those to nodes

@@ -1,5 +1,5 @@
 (function (root, factory) {
-    var clientReadFile = function(request){
+    var clientReadFileGenerator = function(request){
         return function(name, cb){
             request(name, function(err, req, data){
                 cb(err, data);

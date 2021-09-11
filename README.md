@@ -248,9 +248,11 @@ The current major focus of this is to simplify generating and loading database c
 
 **Soon™**
 
-- Parenthetical/Joins Support (via lightweight "join sets" (n-way))
-- Client Library (Usable as an ORM!)
+- Sync/Streaming
+- Client Library/ORM (Electron, then webservice, then popular frameworks)
+- hierarchical joins(unconditional, at first)
 - Sets Fully Live (.and/.or/.not/.xor directly manipulate, switch to filters)
+- cursor
 - Sandboxing - Optional Domain wrappers in object
 - Set pooling - ensuring duplicate queries only allocate 1 resource set
 - inheritance across nodes (streaming between nodes/clusters)

@@ -82,6 +82,7 @@
         this.options = options || {};
         this.tables = {};
         this.jobs = [];
+        this.links = [];
         this.active = 0;
         var ob = this;
         if(this.options.file){
@@ -129,6 +130,108 @@
         }
     }
 
+    DataService.prototype.upstream = function(emitter, opts){
+      var options = opts || {};
+      var upstreamOp = function(operation, collectionName, query, callback){
+        var id = 'todo_switch_to_uuids'+Math.floor(Math.random()*1000000);
+        emitter.emit('mangrove-'+operation, {
+          id: id,
+          name: collectionName,
+          query: query
+        });
+        emitter.once('mangrove-results', {id:{'$eq':id}}, function(response){
+          callback(
+            (response.err && new Error('Upstream Error: '+response.err)),
+            response.results
+          );
+        });
+      };
+      //todo: proactively fetch marked collections
+      if(options.collections){
+        this.links = this.links.concat(options.collections);
+      }
+      this.upstream = function(collectionName){
+        return {
+          find : function(query, cb){
+            return upstreamOp('find', collectionName, query, cb);
+          },
+          insert : function(item, cb){
+            return upstreamOp('insert', collectionName, item, cb);
+          },
+          update : function(updates, where, cb){
+            return upstreamOp('update', collectionName, {updates, where}, cb);
+          },
+          'delete' : function(where, cb){
+            return upstreamOp('delete', collectionName, where, cb);
+          }
+        }
+      }
+      //todo: proactively fetch marked collections
+      if(options.collections){
+        this.links = this.links.concat(options.collections);
+      }
+    }
+
+    DataService.prototype.downstream = function(emitter){
+
+      emitter.on('mangrove-find', (command)=>{
+        this.collection(command.name).find(command.query, (err, set)=>{
+          emitter.emit('mangrove-results', {
+            results : set,
+            error: (err && err.message),
+            id: command.id
+          });
+        });
+      });
+
+      emitter.on('mangrove-update', (command)=>{
+        this.collection(command.name).find(command.query.updates, command.query.where, (err, set)=>{
+          emitter.emit('mangrove-results', {
+            results : set,
+            error: (err && err.message),
+            id: command.id
+          });
+        });
+      });
+
+      emitter.on('mangrove-delete', (command)=>{
+        this.collection(command.name).find(command.query, (err, set)=>{
+          emitter.emit('mangrove-results', {
+            results : set,
+            error: (err && err.message),
+            id: command.id
+          });
+        });
+      });
+
+      emitter.on('mangrove-insert', (command)=>{
+        //todo: handle more than 1
+        this.collection(command.name).insert(command.query, (err, set)=>{
+          emitter.emit('mangrove-results', {
+            results : set,
+            error: (err && err.message),
+            id: command.id
+          });
+        });
+      });
+    }
+
+    DataService.prototype.populate = function(link, query, cb){
+      //todo: actually populate
+      //cases:
+      // name
+      // name + source
+      // name + remote
+      /*if(
+        link.remote ||
+        false || //todo: name + source && empty
+
+      ){
+
+      }*/
+      cb();
+    }
+
     DataService.prototype.collection = function(name, noError){
         if(!this.tables[name] && !noError){
             console.log(this.tables);
@@ -155,6 +258,15 @@
                     if(!collection){
                         collection = new Indexed.Collection([], 'id' );
                         this.tables[query] = collection;
+                        var link = this.links.find(function(link){
+                          return link.name === query.name;
+                        });
+                        if(link){
+                          this.populate(link, query, ()=>{
+                            this.query(query, callback);
+                          });
+                          return;
+                        }
                     }
                     var set = new Indexed.Set(collection);
                     return {

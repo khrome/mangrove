@@ -12,7 +12,8 @@
             'sift',
             'where-parser',
             'strangler',
-            'browser-request'
+            'browser-request',
+            'async-arrays'
         ], function(a, b, c, request){
             return factory(a, b, c, {readFile:clientReadFileGenerator(request)});
         });
@@ -22,7 +23,8 @@
             require('sift'),
             require('where-parser'),
             require('strangler'),
-            require('fs')
+            require('fs'),
+            require('async-arrays')
         );
     }else{
         root.returnExports = factory(
@@ -30,10 +32,11 @@
             root.Sift,
             root.WhereParser,
             root.Strangler,
-            {readFile:clientReadFileGenerator(root.request)}
+            {readFile:clientReadFileGenerator(root.request)},
+            root.AsyncArrays
         );
     }
-}(this, function(Indexed, Sift, WhereParser, strings, fs){
+}(this, function(Indexed, Sift, WhereParser, strings, fs, arrays){
 
     //var jobs = [];
     //var active = 0;
@@ -82,9 +85,10 @@
         this.options = options || {};
         this.tables = {};
         this.jobs = [];
-        this.links = [];
+        this.links = this.options.collections || [];
         this.active = 0;
         var ob = this;
+        //console.log('OPTS', this.options)
         if(this.options.file){
             this.active++;
             fs.readFile(this.options.file, function(err, body){
@@ -103,12 +107,12 @@
         if(this.options.data){
             var data = this.options.data;
             Object.keys(data).forEach(function(collectionName){
-                console.log(collectionName, data[collectionName]);
+                //console.log(collectionName, data[collectionName]);
                 ob.tables[collectionName] = new Indexed.Collection(
                     data[collectionName],
                     'id'
                 );
-                console.log(collectionName, (new Indexed.Set(ob.tables[collectionName])).toArray() );
+                //console.log(collectionName, (new Indexed.Set(ob.tables[collectionName])).toArray() );
             });
         }
         //options.lazy
@@ -166,10 +170,6 @@
           }
         }
       }
-      //todo: proactively fetch marked collections
-      if(options.collections){
-        this.links = this.links.concat(options.collections);
-      }
     }
 
     DataService.prototype.downstream = function(emitter){
@@ -222,19 +222,32 @@
       // name
       // name + source
       // name + remote
-      /*if(
-        link.remote ||
-        false || //todo: name + source && empty
-
+      if(
+        (
+          link.remote ||
+          false //todo: name/name + source && empty
+        ) && link.driver
       ){
+        if(!this.tables[link.name]){
+            this.tables[link.name] = new Indexed.Collection([], link.key || 'id');
+        }
+        link.driver.loadCollection(this.tables[link.name], link.name, {}, ()=>{
+          cb();
+        });
+      }
+    }
 
-      }*/
-      cb();
+    DataService.prototype.prepopulate = function(cb){
+      arrays.forEachEmission((this.links || []), (link, index, done)=>{
+          this.populate(link, {}, ()=>{ done() });
+      }, ()=>{
+        cb()
+      });
     }
 
     DataService.prototype.collection = function(name, noError){
         if(!this.tables[name] && !noError){
-            console.log(this.tables);
+            //console.log(this.tables);
             throw new Error('unknown collection: '+name);
         }
         return this.tables[name];
@@ -314,6 +327,18 @@
         }
     }
 
+    var needsRemoteFetch = function(ob, collectionName){
+        if(ob.links){
+            var link = ob.links.find(function(link){
+              if(link.name === collectionName) return true;
+              return false;
+            });
+            if(link){
+              if(link.remote == true) return true;
+            }else return false;
+        }else return false;
+    }
+
     DataService.prototype.sql = function(query, callback){
         var ob = this;
         this.ready(function(){
@@ -326,6 +351,7 @@
                 var where = whereParser.parse(match[3]);
                 if(ob.log) ob.log('select', collections, where);
                 //todo: handle specific returns
+                //console.log('select', collections[0])
                 var results = computeSetWhere(new Indexed.Set(collection), where);
                 if(ob.log) ob.log('select-result', results.toArray());
                 if(collections.length > 1) throw new Exception('multi-collection selection unavailable');
@@ -337,6 +363,7 @@
                     var returns = match[1].trim();
                     var collections = match[2].split(',');
                     if(ob.log) ob.log('select', collections, match[0]);
+                    //console.log('select', collections[0], needsRemoteFetch(this, collections[0]))
                     if(collections.length > 1) throw new Exception('multi-collection selection unavailable');
                     var collection = ob.collection(collections[0]);
                     var result = new Indexed.Set(collection);

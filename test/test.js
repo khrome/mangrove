@@ -1,12 +1,16 @@
 var should = require("should");
 var request = require("request");
-var Mangrove = require('./mangrove');
+var Mangrove = require('../mangrove');
+var MangroveJSON = require('mangrove-json');
+var path = require('path');
 
 describe('Mangrove', function(){
 
     describe('handles SQL', function(){
 
-        var datasource = new Mangrove({file:'testdata.json'});
+        var datasource = new Mangrove({
+          file: path.join(__dirname, 'data', 'testdata.json')
+        });
 
         describe('selects', function(){
 
@@ -206,7 +210,9 @@ describe('Mangrove', function(){
 
     describe('handles mongo/sift', function(){
 
-        var datasource = new Mangrove({file:'testdata.json'});
+        var datasource = new Mangrove({
+          file: path.join(__dirname, 'data', 'testdata.json')
+        });
 
         describe('selects', function(){
 
@@ -384,6 +390,39 @@ describe('Mangrove', function(){
             });
 
         });
+
+    });
+
+    describe('loads', function(){
+
+      describe('a JSON datasource', function(){
+
+          it('loads a fingle connection', function(done){
+
+              var datasource = new Mangrove({
+                collections : [
+                  {
+                    name: 'users',
+                    remote: true,
+                    //where: {'user_id':{'$eq':'my-user-id'}},
+                    driver: new MangroveJSON.Adapter({
+                      root : path.join(__dirname, 'data')
+                    })
+                  }
+                ]
+              });
+
+              datasource.prepopulate(function(){
+                  datasource.query('users').find(function(err, results){
+                    should.not.exist(err);
+                    results.length.should.equal(6);
+                    done();
+                  })
+              });
+
+          });
+
+      });
 
     });
 });

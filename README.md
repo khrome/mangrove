@@ -248,8 +248,7 @@ The current major focus of this is to simplify generating and loading database c
 
 **Soon™**
 
-- Sync/Streaming
-- Client Library/ORM (Electron, then webservice, then popular frameworks)
+- Update Docs for streaming & client use
 - hierarchical joins(unconditional, at first)
 - Sets Fully Live (.and/.or/.not/.xor directly manipulate, switch to filters)
 - cursor

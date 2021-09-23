@@ -88,7 +88,6 @@
         this.links = this.options.collections || [];
         this.active = 0;
         var ob = this;
-        //console.log('OPTS', this.options)
         if(this.options.file){
             this.active++;
             fs.readFile(this.options.file, function(err, body){
@@ -107,12 +106,10 @@
         if(this.options.data){
             var data = this.options.data;
             Object.keys(data).forEach(function(collectionName){
-                //console.log(collectionName, data[collectionName]);
                 ob.tables[collectionName] = new Indexed.Collection(
                     data[collectionName],
                     'id'
                 );
-                //console.log(collectionName, (new Indexed.Set(ob.tables[collectionName])).toArray() );
             });
         }
         //options.lazy
@@ -138,16 +135,17 @@
       var options = opts || {};
       var upstreamOp = function(operation, collectionName, query, callback){
         var id = 'todo_switch_to_uuids'+Math.floor(Math.random()*1000000);
-        emitter.emit('mangrove-'+operation, {
+        emitter.once('mangrove-results', {id:{$eq:id}}, function(response){
+          let data = arguments[arguments.length-1];
+          callback(
+            (data.err && new Error('Upstream Error: '+data.err)),
+            data.results
+          );
+        });
+        emitter.send('mangrove-'+operation, {
           id: id,
           name: collectionName,
           query: query
-        });
-        emitter.once('mangrove-results', {id:{'$eq':id}}, function(response){
-          callback(
-            (response.err && new Error('Upstream Error: '+response.err)),
-            response.results
-          );
         });
       };
       //todo: proactively fetch marked collections
@@ -170,50 +168,73 @@
           }
         }
       }
+      this.links.forEach((link)=>{
+        if(this.upstream && link.remote && !link.driver){
+            //if we don't have a driver, it's remote and there's an upstream use that:
+            link.driver = new (DataService.adapt(this.upstream))();
+        }
+      });
     }
 
-    DataService.prototype.downstream = function(emitter){
-
-      emitter.on('mangrove-find', (command)=>{
-        this.collection(command.name).find(command.query, (err, set)=>{
-          emitter.emit('mangrove-results', {
-            results : set,
+    DataService.prototype.downstream = function(emitter, outboundEmitter){
+      var out = outboundEmitter || emitter;
+      emitter.on('mangrove-find', (event, command)=>{
+        var handler = (err, set)=>{
+          out.emit('mangrove-results', {
+            results : set.toArray(),
             error: (err && err.message),
             id: command.id
           });
-        });
+        }
+        if(typeof command.query === 'string'){
+          this.sql(command.query, handler);
+        }else{
+          this.query(command.name).find(command.query, handler);
+        }
       });
 
-      emitter.on('mangrove-update', (command)=>{
-        this.collection(command.name).find(command.query.updates, command.query.where, (err, set)=>{
-          emitter.emit('mangrove-results', {
-            results : set,
+      emitter.on('mangrove-update', (event, command)=>{
+        var handler = (err, set)=>{
+          out.emit('mangrove-results', {
             error: (err && err.message),
             id: command.id
           });
-        });
+        }
+        if(typeof command.query === 'string'){
+          this.sql(command.query, handler);
+        }else{
+          this.query(command.name).update(command.query, handler);
+        }
       });
 
-      emitter.on('mangrove-delete', (command)=>{
-        this.collection(command.name).find(command.query, (err, set)=>{
-          emitter.emit('mangrove-results', {
-            results : set,
+      emitter.on('mangrove-delete', (event, command)=>{
+        var handler = (err, set)=>{
+          out.emit('mangrove-results', {
             error: (err && err.message),
             id: command.id
           });
-        });
+        }
+        if(typeof command.query === 'string'){
+          this.sql(command.query, handler);
+        }else{
+          this.query(command.name).delete(command.query, handler);
+        }
       });
 
-      emitter.on('mangrove-insert', (command)=>{
-        //todo: handle more than 1
-        this.collection(command.name).insert(command.query, (err, set)=>{
-          emitter.emit('mangrove-results', {
-            results : set,
+      emitter.on('mangrove-insert', (event, command)=>{
+        var handler = (err, set)=>{
+          out.emit('mangrove-results', {
             error: (err && err.message),
             id: command.id
           });
-        });
+        }
+        if(typeof command.query === 'string'){
+          this.sql(command.query, handler);
+        }else{
+          this.query(command.name).insert(command.query, handler);
+        }
       });
+
     }
 
     DataService.prototype.populate = function(link, query, cb){
@@ -247,7 +268,6 @@
 
     DataService.prototype.collection = function(name, noError){
         if(!this.tables[name] && !noError){
-            //console.log(this.tables);
             throw new Error('unknown collection: '+name);
         }
         return this.tables[name];
@@ -333,10 +353,20 @@
               if(link.name === collectionName) return true;
               return false;
             });
-            if(link){
-              if(link.remote == true) return true;
-            }else return false;
+            if(link && link.remote) return link;
+            else return false;
         }else return false;
+    }
+
+    var handleRemoteFetch = function(ob, collectionName, collection, callback){
+        var link;
+        if((!collection) && (link = needsRemoteFetch(ob, collectionName))){
+            ob.upstream(collectionName).find('select * from '+collectionName, function(err, results){
+                callback(err, results);
+            });
+            return true;
+        }
+        return false;
     }
 
     DataService.prototype.sql = function(query, callback){
@@ -348,10 +378,11 @@
                 var returns = match[1];
                 var collections = match[2].split(',');
                 var collection = ob.collection(collections[0]);
+                var link;
+                if(handleRemoteFetch(ob, collections[0], collection, callback)) return;
                 var where = whereParser.parse(match[3]);
                 if(ob.log) ob.log('select', collections, where);
                 //todo: handle specific returns
-                //console.log('select', collections[0])
                 var results = computeSetWhere(new Indexed.Set(collection), where);
                 if(ob.log) ob.log('select-result', results.toArray());
                 if(collections.length > 1) throw new Exception('multi-collection selection unavailable');
@@ -363,9 +394,10 @@
                     var returns = match[1].trim();
                     var collections = match[2].split(',');
                     if(ob.log) ob.log('select', collections, match[0]);
-                    //console.log('select', collections[0], needsRemoteFetch(this, collections[0]))
                     if(collections.length > 1) throw new Exception('multi-collection selection unavailable');
-                    var collection = ob.collection(collections[0]);
+                    var collection = ob.collection(collections[0], true);
+                    if(handleRemoteFetch(ob, collections[0], collection, callback)) return;
+                    if(!collection) throw new Error('Collection not Loaded');
                     var result = new Indexed.Set(collection);
                     if(ob.log) ob.log('select-result', result.toArray());
                     if(returns == '*'){
@@ -526,6 +558,27 @@
             });
             return promise;
         }
+    }
+    DataService.adapt = function(fudi){
+        var Adapter = function(){
+
+        }
+        Adapter.prototype.load = function(name, options, handler, cb){
+          fudi(name).find('select * from '+name, function(err, results){
+            results.forEach((item)=>{
+              handler(item);
+            });
+            setTimeout(()=>{
+              cb();
+            })
+          })
+        }
+        Adapter.prototype.loadCollection = function(collection, name, options, cb){
+            this.load(name, options, function(item){
+              collection.index[item[collection.primaryKey]] = item;
+            }, cb);
+        }
+        return Adapter;
     }
     return DataService;
 }));

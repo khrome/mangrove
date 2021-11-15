@@ -45,7 +45,7 @@ datasource.query(
 <details><summary> QD + ⨍ </summary><p>
 
 ```javascript
-datasource.query('users').find({
+datasource.inquire('users').find({
     age:{$gt:24}
 }, function(err, data){
     //if !err data is an Indexed.Set
@@ -56,11 +56,11 @@ datasource.query('users').find({
 <details><summary> SQL + 🙏 </summary><p>
 
 ```javascript
-datasource.inquire(
+datasource.query(
     'select * from users where age > 24'
 ).then((results)=>{
     //use results
-}).error((err)=>{
+}).catch((err)=>{
     //handle error
 })
 ```
@@ -74,7 +74,7 @@ datasource.inquire('users').find({
     age:{$gt:24}
 }).then((results)=>{
     //use results
-}).error((err)=>{
+}).catch((err)=>{
     //handle error
 });
 ```
@@ -168,7 +168,7 @@ datasource.inquire(
     '(22, "richard", "fdjkdfhhir987ere")'
 ).then((results)=>{
     //use results
-}).error((err)=>{
+}).catch((err)=>{
     //handle error
 })
 ```
@@ -196,7 +196,7 @@ datasource.inquire('users').insert([{
     id: "fdjkdfhhir987ere"
 }]).then(()=>{
     //things are saved
-}).error((err)=>{
+}).catch((err)=>{
     //handle error
 });
 ```
@@ -289,7 +289,7 @@ datasource.inquire(
     'update users set name="ringo",likes="gardens" where id="fdjkdfhhir987ere"'
 ).then((results)=>{
     //saved
-}).error((err)=>{
+}).catch((err)=>{
     //handle error
 })
 ```
@@ -306,7 +306,7 @@ datasource.inquire('users').update({
     id: "fdjkdfhhir987ere"
 }).then((results)=>{
     //saved
-}).error((err)=>{
+}).catch((err)=>{
     //handle error
 });
 ```
@@ -381,7 +381,7 @@ datasource.inquire(
     'delete from users where name="stu"'
 ).then(()=>{
     //items are gone
-}).error((err)=>{
+}).catch((err)=>{
     //handle error
 })
 ```
@@ -395,7 +395,7 @@ datasource.inquire('users').delete({
     name : "stu"
 }).then((results)=>{
     //items are gone
-}).error((err)=>{
+}).catch((err)=>{
     //handle error
 });
 ```

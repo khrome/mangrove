@@ -45,7 +45,7 @@ import * as Mangrove from 'mangrove';
 <h3>Create an instance</h3>
 
 ```javascript
-var datasource = new Mangrove({
+let datasource = new Mangrove({
     file:'data.json'
 });
 ```

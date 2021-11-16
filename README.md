@@ -24,6 +24,32 @@ Usage
 
 `mangrove` supports two query syntaxes, which use a common structured execution format as well as allowing return by callback (⨍) or promise(🙏, which also enables await(⏱)).
 
+<h3>Import the library</h3>
+<table width="100%"><tr><td valign="top">
+<details><summary> require </summary><p>
+
+```javascript
+const Mangrove = require('mangrove');
+```
+
+</p></details></td><td valign="top">
+
+<details><summary> import </summary><p>
+
+```javascript
+import * as Mangrove from 'mangrove';
+```
+
+</p></details></td></tr></table>
+
+<h3>Create an instance</h3>
+
+```javascript
+var datasource = new Mangrove({
+    file:'data.json'
+});
+```
+
 <h3>Selecting</h3>
 <table><tr><td colspan="2">
 

@@ -1,7 +1,7 @@
 {
     "name": "mangrove",
     "homepage": "https://github.com/khrome/mangrove",
-    "version": "0.7.3",
+    "version": "0.7.4",
     "main": "mangrove.js",
     "description": "economical in-memory database with queries in SQL or Mongo Query Documents",
     "author": "Abbey Hawk Sparrow <@khrome> (http://patternweaver.com)",
@@ -38,7 +38,7 @@
         "where-parser": "*"
     },
     "devDependencies": {
-        "mangrove-json": "0.0.6",
+        "mangrove-json": "0.0.7",
         "mocha": "*",
         "should": "*"
     }

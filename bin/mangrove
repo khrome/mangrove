@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-var art = require('ascii-art');
+var { Ansi, Color } = require('@ansi-art/tools');
 var Figlet = require('ascii-art-font');
-var CLApp = require('app-term-kit');
+var Table = require('ascii-art-table');
+var CLApp = require('@protolus/terminal-app');
 var os = require('os');
 var fs = require('fs');
 var path = require('path');
@@ -13,10 +14,38 @@ var util = require('../util.js');
 var request = require('request-as-request');
 var Indexed = require('indexed-set');
 
+const ansi = new Ansi(new Color('4bit'));
+
+const ansiTable = (item, cb)=>{
+    var opts = {};
+     [
+         'intersection', 'horizontalBar', 'verticalBar',
+         'dataStyle', 'headerStyle', 'bars', 'cellStyle',
+         'borderColor'
+     ].forEach(function(opt){
+         opts[opt] = item[opt];
+     })
+     var table = new Table(opts);
+     var fields = item.columns ||
+        Object.keys(item.data[0]||{});
+     table.setHeading.apply(table, fields);
+     table.data = item.data;
+     var res = table.write(
+         item.width ||
+         (
+             process &&
+             process.stdout &&
+             process.stdout.columns
+         ) || 80
+     );
+     return res;
+     setTimeout(( ()=> cb(res) ), 1);
+}
+
 const PAYLOAD = util.payload;
 if(PAYLOAD.defaultMode !== 'json') PAYLOAD.defaultMode = 'json';
 
-Figlet.fontPath = path.join(__dirname, 'Fonts')+'/'
+Figlet.fontPath = path.join(__dirname, 'node_modules', 'ascii-art-font', 'Fonts')+'/'
 
 var app = new CLApp(pkg.name, {
     copyright : 'Abbey Hawk Sparrow',
@@ -33,14 +62,14 @@ var hdr;
 
 var makeHeader = function(config, cb){
     if(hdr) return cb(null, hdr);
-    art.font(pkg.name, 'cyberlarge', function(err, ascii){
+    Figlet.write(pkg.name, 'cyberlarge', function(err, ascii){
         cb(null, (hdr = [
             ascii,
             pkg.description,
             '['+ //todo: make this variable, based on passed data
-                art.style(' ready ', 'green', true)+']=[ @'+
-                art.style(' localhost ', 'white', true)+']=['+
-                art.style(' port '+config.port+' ', 'white', true)+
+                ansi.Codes(' ready ', 'green', true)+']=[ @'+
+                ansi.Codes(' localhost ', 'white', true)+']=['+
+                ansi.Codes(' port '+config.port+' ', 'white', true)+
             ']'
         ].join("\n")+"\n"))
     });
@@ -158,7 +187,7 @@ app.useable(function(err){
                                 if(thisErr){
                                     console.log('[ ERROR: '+thisErr.message+' ]');
                                 }else{//success!
-                                    art.table({
+                                    ansiTable({
                                         width : 80,
                                         data : data,
                                         bars : 'double',
